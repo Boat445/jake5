@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>F1</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.min.js"></script>
+
+    <script>
+
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 5);
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+        // Light
+        scene.background = new THREE.Color(0xb3e0ff);
+        scene.add(new THREE.AmbientLight(0x808080));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        dirLight.position.set(10, 5, 10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // สร้างพื้น
+        const groundGeo = new THREE.PlaneGeometry(20, 20);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = 0;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // GUI for light control
+        const gui = new dat.GUI({ width: 600 });
+        gui.domElement.style.maxHeight = "500px";
+        gui.domElement.style.overflowY = "auto"; 
+        const lightFolder = gui.addFolder('Directional Light');
+        lightFolder.add(dirLight, 'intensity', 0, 2, 0.01).name('Intensity');
+        lightFolder.add(dirLight.position, 'x', -100, 100, 0.1).name('Position X');
+        lightFolder.add(dirLight.position, 'y', 0, 100, 0.1).name('Position Y');
+        lightFolder.add(dirLight.position, 'z', -100, 100, 0.1).name('Position Z');
+        lightFolder.open();
+        const metalnessRoughnessFolder = gui.addFolder('Material Properties');
+        metalnessRoughnessFolder.add({ metalness: 10 }, 'metalness', 1, 100, 0.1).name('Metalness').onChange((value) => {
+            scene.traverse((child) => {
+                if (child.isMesh && child.material && 'metalness' in child.material) {
+                    child.material.metalness = value;
+                    child.material.needsUpdate = true;
+                }
+            });
+        });
+        metalnessRoughnessFolder.add({ roughness: 10 }, 'roughness', -100, 100, 0.1).name('Roughness').onChange((value) => {
+            scene.traverse((child) => {
+                if (child.isMesh && child.material && 'roughness' in child.material) {
+                    child.material.roughness = value;
+                    child.material.needsUpdate = true;
+                }
+            });
+        });
+        metalnessRoughnessFolder.open();
+
+         // Building texture
+        const box1Texture = new THREE.TextureLoader().load(
+            'https://ghost6910.github.io/GhostModel.github.io/building1.jpg'
+        );
+        box1Texture.wrapS = THREE.RepeatWrapping;
+        box1Texture.wrapT = THREE.RepeatWrapping;
+
+        // box1
+        const box1Geometry = new THREE.BoxGeometry(5, 15, 5);
+        const box1Material = new THREE.MeshStandardMaterial({
+            map: box1Texture,
+            metalness: 0.3,
+            roughness: 0.7
+        });
+        const box1Mesh = new THREE.Mesh(box1Geometry, box1Material);
+        box1Mesh.position.set(10, 5, 1);
+        box1Mesh.castShadow = true;
+        box1Mesh.receiveShadow = true;
+        scene.add(box1Mesh);
+
+
+        
+
+        
+
+
+
+        // โหลด texture ทั้ง 6 ไฟล์
+        const texLoader = new THREE.TextureLoader();
+        const texList = [
+            texLoader.load("https://boat445.github.io/jake5/BODY_diffuse.png"),
+            texLoader.load("https://boat445.github.io/jake5/EYE_SeamsColor_diffuse.png"),
+            texLoader.load("https://boat445.github.io/jake5/NOSE_diffuse.png"),
+
+        ];
+
+        // โหลด OBJ แล้วสลับ texture ให้ทีละ mesh
+        const loader = new THREE.OBJLoader();
+        loader.load("https://boat445.github.io/jake5/jake.obj", (object) => {
+    let i = 0;
+    object.traverse((child) => {
+        if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+
+            child.material = new THREE.MeshStandardMaterial({
+                map: texList[i % texList.length]  // สลับ texture ไปเรื่อย ๆ
+            });
+
+            i++;
+        }
+    });
+    object.position.y = 3; // ยกโมเดลขึ้นเหนือพื้น (ปรับค่าได้ตามต้องการ)
+    scene.add(object);
+});
+
+        // Render loop
+        function animate() {
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+
+</html>
